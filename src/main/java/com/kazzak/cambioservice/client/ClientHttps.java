@@ -2,24 +2,40 @@ package com.kazzak.cambioservice.client;
 
 import com.kazzak.cambioservice.model.Cambio;
 import com.kazzak.cambioservice.model.Currency;
-import org.springframework.boot.web.client.RestTemplateBuilder;
+import com.kazzak.cambioservice.model.ResultCurrency;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestTemplate;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Mono;
 
 import java.io.IOException;
-import java.net.URL;
-
 @Component
 public class ClientHttps {
-    //private static final String URL_REQUEST = "https://economia.awesomeapi.com.br";
-    private static final String CONTENT_TYPE_VALUE = "application/json";
 
-    private static final String DEFAULT_ENCODING = "UTF-8";
 
-    public Cambio execute(String restURL, Cambio cambio) throws IOException {
-        URL url = new URL(restURL);
-        RestTemplate restTemplate = new RestTemplateBuilder().build();
-        Currency currency = restTemplate.getForObject("https://economia.awesomeapi.com.br/json/last/USD-BRL", Currency.class);
+    private WebClient webClient;
+
+    public Cambio execute(Cambio cambio) throws IOException {
+        if (this.webClient == null) {
+            build(WebClient.builder());
+        }
+        Mono<ResultCurrency> currencyMono = webClient.method(HttpMethod.GET)
+                .uri("/json/last/USD-BRL")
+                .retrieve()
+                .bodyToMono(ResultCurrency.class);
+        ResultCurrency c = currencyMono.block();
         return cambio;
     }
+
+    private WebClient build(WebClient.Builder builder){
+        return  this.webClient=builder
+                .baseUrl("https://economia.awesomeapi.com.br")
+                .defaultHeader(HttpHeaders.ACCEPT_CHARSET, MediaType.APPLICATION_JSON_VALUE)
+                .build();
+    }
 }
+
